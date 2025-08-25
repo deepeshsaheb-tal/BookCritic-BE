@@ -1,0 +1,8 @@
+# Cron job configuration for BookCritic database backups
+# To install: crontab -e and paste the content below
+
+# Run daily backup at 2:00 AM
+0 2 * * * cd /path/to/BookCritic-BE/scripts && ./backup.sh >> /path/to/BookCritic-BE/backups/cron.log 2>&1
+
+# Run weekly full backup on Sunday at 3:00 AM
+0 3 * * 0 cd /path/to/BookCritic-BE/scripts && AWS_FULL_BACKUP=true ./backup.sh >> /path/to/BookCritic-BE/backups/cron.log 2>&1
