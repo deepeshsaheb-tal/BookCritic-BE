@@ -5,6 +5,7 @@ import { Book } from './entities/book.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { BookGenre } from './entities/book-genre.entity';
+import { Review } from '../reviews/entities/review.entity';
 
 /**
  * Service for managing book operations
@@ -18,6 +19,8 @@ export class BooksService {
     private readonly booksRepository: Repository<Book>,
     @InjectRepository(BookGenre)
     private readonly bookGenresRepository: Repository<BookGenre>,
+    @InjectRepository(Review)
+    private readonly reviewsRepository: Repository<Review>,
   ) {}
 
   /**
@@ -54,7 +57,7 @@ export class BooksService {
     const [books, total] = await this.booksRepository.findAndCount({
       skip,
       take,
-      relations: ['bookGenres', 'bookGenres.genre'],
+      relations: ['bookGenres', 'bookGenres.genre', 'reviews'],
     });
     
     return { books, total };
@@ -99,6 +102,7 @@ export class BooksService {
       .orWhere('book.isbn = :isbn', { isbn: query })
       .leftJoinAndSelect('book.bookGenres', 'bookGenres')
       .leftJoinAndSelect('bookGenres.genre', 'genre')
+      .leftJoinAndSelect('book.reviews', 'reviews')
       .skip(skip)
       .take(take)
       .getManyAndCount();
@@ -167,5 +171,26 @@ export class BooksService {
     );
     
     await this.bookGenresRepository.save(bookGenres);
+  }
+  
+  /**
+   * Calculate average rating and total reviews for a book
+   * @param bookId - Book ID
+   * @returns Object containing average rating and total reviews
+   */
+  async calculateBookRatingStats(bookId: string): Promise<{ averageRating: number; totalReviews: number }> {
+    this.logger.log(`Calculating rating stats for book with ID: ${bookId}`);
+    
+    const result = await this.reviewsRepository
+      .createQueryBuilder('review')
+      .select('AVG(review.rating)', 'averageRating')
+      .addSelect('COUNT(review.id)', 'totalReviews')
+      .where('review.bookId = :bookId', { bookId })
+      .getRawOne();
+    
+    return {
+      averageRating: result.averageRating ? parseFloat(parseFloat(result.averageRating).toFixed(1)) : 0,
+      totalReviews: result.totalReviews ? parseInt(result.totalReviews) : 0
+    };
   }
 }

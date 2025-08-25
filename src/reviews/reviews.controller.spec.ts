@@ -41,6 +41,9 @@ describe('ReviewsController', () => {
       updatedAt: new Date(),
       bookGenres: [],
       reviews: [],
+      averageRating: 4.5,
+      totalReviews: 2,
+      calculateAverageRating: jest.fn(),
     },
   };
 

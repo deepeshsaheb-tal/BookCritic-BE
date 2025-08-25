@@ -6,10 +6,12 @@ import { Review } from './entities/review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BooksService } from '../books/books.service';
 
 describe('ReviewsService', () => {
   let service: ReviewsService;
   let repository: Repository<Review>;
+  let booksService: BooksService;
   let loggerLogSpy: jest.SpyInstance;
   let loggerWarnSpy: jest.SpyInstance;
 
@@ -44,6 +46,9 @@ describe('ReviewsService', () => {
       updatedAt: new Date(),
       bookGenres: [],
       reviews: [],
+      averageRating: 4.5,
+      totalReviews: 2,
+      calculateAverageRating: jest.fn(),
     },
   };
 
@@ -78,11 +83,19 @@ describe('ReviewsService', () => {
             createQueryBuilder: jest.fn().mockReturnValue(createQueryBuilderMock),
           },
         },
+        {
+          provide: BooksService,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue(mockReview.book),
+            calculateBookRatingStats: jest.fn().mockResolvedValue({ averageRating: 4.5, totalReviews: 2 }),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<ReviewsService>(ReviewsService);
     repository = module.get<Repository<Review>>(getRepositoryToken(Review));
+    booksService = module.get<BooksService>(BooksService);
     
     // Setup logger spies after service is instantiated
     const logger = (service as any).logger;
@@ -99,7 +112,7 @@ describe('ReviewsService', () => {
   });
 
   describe('create', () => {
-    it('should create a new review', async () => {
+    it('should create a new review and update book rating stats', async () => {
       const createReviewDto: CreateReviewDto = {
         bookId: '123e4567-e89b-12d3-a456-426614174001',
         rating: 4,
@@ -121,6 +134,7 @@ describe('ReviewsService', () => {
         userId: '123e4567-e89b-12d3-a456-426614174002',
       });
       expect(repository.save).toHaveBeenCalledWith(mockReview);
+      expect(booksService.findOne).toHaveBeenCalledWith(createReviewDto.bookId);
       expect(result).toEqual(mockReview);
       expect(loggerLogSpy).toHaveBeenCalledWith(`Creating new review for book ${createReviewDto.bookId} by user 123e4567-e89b-12d3-a456-426614174002`);
     });
@@ -261,7 +275,7 @@ describe('ReviewsService', () => {
   });
 
   describe('update', () => {
-    it('should update a review when it exists and belongs to the user', async () => {
+    it('should update a review when it exists and belongs to the user and update book rating stats', async () => {
       const updateReviewDto: UpdateReviewDto = {
         rating: 5,
         content: 'Updated review content',
@@ -285,6 +299,7 @@ describe('ReviewsService', () => {
         ...mockReview,
         ...updateReviewDto,
       });
+      expect(booksService.findOne).toHaveBeenCalledWith(mockReview.bookId);
       expect(result).toEqual(updatedReview);
       expect(loggerLogSpy).toHaveBeenCalledWith(`Updating review with ID: 123e4567-e89b-12d3-a456-426614174000 by user 123e4567-e89b-12d3-a456-426614174002`);
     });
@@ -338,13 +353,14 @@ describe('ReviewsService', () => {
   });
 
   describe('remove', () => {
-    it('should remove a review when it exists and belongs to the user', async () => {
+    it('should remove a review when it exists and belongs to the user and update book rating stats', async () => {
       jest.spyOn(service, 'findOne').mockResolvedValueOnce(mockReview);
 
       await service.remove('123e4567-e89b-12d3-a456-426614174000', '123e4567-e89b-12d3-a456-426614174002');
 
       expect(service.findOne).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000');
       expect(repository.remove).toHaveBeenCalledWith(mockReview);
+      expect(booksService.findOne).toHaveBeenCalledWith(mockReview.bookId);
     });
 
     it('should throw ForbiddenException when review belongs to another user', async () => {
@@ -379,6 +395,27 @@ describe('ReviewsService', () => {
       const result = await service.getAverageRating('123e4567-e89b-12d3-a456-426614174001');
 
       expect(result).toEqual(0);
+    });
+  });
+  
+  describe('updateBookRatingStats', () => {
+    it('should call booksService.findOne with the correct bookId', async () => {
+      // Access the private method using type assertion
+      await (service as any).updateBookRatingStats('123e4567-e89b-12d3-a456-426614174001');
+      
+      expect(booksService.findOne).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174001');
+    });
+    
+    it('should handle errors gracefully', async () => {
+      jest.spyOn(booksService, 'findOne').mockRejectedValueOnce(new Error('Test error'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      // Should not throw an error
+      await expect((service as any).updateBookRatingStats('123e4567-e89b-12d3-a456-426614174001')).resolves.not.toThrow();
+      
+      expect(booksService.findOne).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174001');
+      // Restore console.error
+      (console.error as jest.Mock).mockRestore();
     });
   });
 });

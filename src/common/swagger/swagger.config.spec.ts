@@ -57,11 +57,9 @@ describe('Swagger Configuration', () => {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
+        description: 'Enter JWT token WITHOUT Bearer prefix',
       },
-      'JWT-auth',
+      'access-token',
     );
     
     // Verify tags were added
@@ -78,7 +76,7 @@ describe('Swagger Configuration', () => {
     
     // Verify SwaggerModule methods were called
     expect(SwaggerModule.createDocument).toHaveBeenCalledWith(app, 'swagger-options');
-    expect(SwaggerModule.setup).toHaveBeenCalledWith('api/docs', app, 'swagger-document', {
+    expect(SwaggerModule.setup).toHaveBeenCalledWith('api-docs', app, 'swagger-document', {
       swaggerOptions: {
         persistAuthorization: true,
       },

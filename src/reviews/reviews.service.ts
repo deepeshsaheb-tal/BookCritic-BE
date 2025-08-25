@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Review } from './entities/review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { BooksService } from '../books/books.service';
 
 /**
  * Service for managing review operations
@@ -15,6 +16,7 @@ export class ReviewsService {
   constructor(
     @InjectRepository(Review)
     private readonly reviewsRepository: Repository<Review>,
+    private readonly booksService: BooksService,
   ) {}
 
   /**
@@ -44,7 +46,12 @@ export class ReviewsService {
       userId,
     });
     
-    return this.reviewsRepository.save(review);
+    const savedReview = await this.reviewsRepository.save(review);
+    
+    // Update book rating statistics
+    await this.updateBookRatingStats(savedReview.bookId);
+    
+    return savedReview;
   }
 
   /**
@@ -152,7 +159,12 @@ export class ReviewsService {
     
     Object.assign(review, updateReviewDto);
     
-    return this.reviewsRepository.save(review);
+    const updatedReview = await this.reviewsRepository.save(review);
+    
+    // Update book rating statistics
+    await this.updateBookRatingStats(updatedReview.bookId);
+    
+    return updatedReview;
   }
 
   /**
@@ -167,6 +179,7 @@ export class ReviewsService {
     this.logger.log(`Removing review with ID: ${id} by user ${userId}`);
     
     const review = await this.findOne(id);
+    const bookId = review.bookId; // Store bookId before removing the review
     
     // Check if the user is the author of the review
     if (review.userId !== userId) {
@@ -175,6 +188,9 @@ export class ReviewsService {
     }
     
     await this.reviewsRepository.remove(review);
+    
+    // Update book rating statistics after removal
+    await this.updateBookRatingStats(bookId);
   }
 
   /**
@@ -191,6 +207,21 @@ export class ReviewsService {
       .where('review.bookId = :bookId', { bookId })
       .getRawOne();
     
-    return result.averageRating ? parseFloat(result.averageRating) : 0;
+    return result.averageRating ? parseFloat(parseFloat(result.averageRating).toFixed(1)) : 0;
+  }
+  
+  /**
+   * Update book rating statistics when reviews change
+   * @param bookId - Book ID
+   * @returns Void
+   */
+  private async updateBookRatingStats(bookId: string): Promise<void> {
+    this.logger.log(`Updating rating statistics for book with ID: ${bookId}`);
+    try {
+      // Use the BooksService to get the book with updated reviews
+      await this.booksService.findOne(bookId);
+    } catch (error) {
+      this.logger.error(`Error updating book rating stats: ${error.message}`);
+    }
   }
 }

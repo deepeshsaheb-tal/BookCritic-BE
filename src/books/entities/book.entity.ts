@@ -1,7 +1,8 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany, AfterLoad } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { BookGenre } from './book-genre.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Book entity representing books in the system
@@ -31,4 +32,31 @@ export class Book extends BaseEntity {
 
   @OneToMany(() => BookGenre, (bookGenre) => bookGenre.book)
   bookGenres: BookGenre[];
+  
+  /**
+   * Average rating of the book (calculated from reviews)
+   */
+  @ApiProperty({ description: 'Average rating of the book (1-5)', type: Number })
+  averageRating: number;
+  
+  /**
+   * Total number of reviews for the book
+   */
+  @ApiProperty({ description: 'Total number of reviews for the book', type: Number })
+  totalReviews: number;
+  
+  /**
+   * Calculate average rating and total reviews after loading the entity
+   */
+  @AfterLoad()
+  calculateAverageRating(): void {
+    if (this.reviews && this.reviews.length > 0) {
+      const sum = this.reviews.reduce((acc, review) => acc + review.rating, 0);
+      this.averageRating = parseFloat((sum / this.reviews.length).toFixed(1));
+      this.totalReviews = this.reviews.length;
+    } else {
+      this.averageRating = 0;
+      this.totalReviews = 0;
+    }
+  }
 }

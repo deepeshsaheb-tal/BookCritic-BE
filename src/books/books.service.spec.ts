@@ -7,11 +7,13 @@ import { BookGenre } from './entities/book-genre.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { NotFoundException } from '@nestjs/common';
+import { Review } from '../reviews/entities/review.entity';
 
 describe('BooksService', () => {
   let service: BooksService;
   let bookRepository: Repository<Book>;
   let bookGenreRepository: Repository<BookGenre>;
+  let reviewRepository: Repository<Review>;
 
   const mockBook: Book = {
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -25,6 +27,9 @@ describe('BooksService', () => {
     updatedAt: new Date(),
     bookGenres: [],
     reviews: [],
+    averageRating: 0,
+    totalReviews: 0,
+    calculateAverageRating: jest.fn(),
   };
 
   const mockBookWithGenres: Book = {
@@ -44,6 +49,9 @@ describe('BooksService', () => {
         book: undefined,
       },
     ],
+    averageRating: 0,
+    totalReviews: 0,
+    calculateAverageRating: jest.fn(),
   };
 
   const mockBooks = [mockBook, { ...mockBook, id: '223e4567-e89b-12d3-a456-426614174001' }];
@@ -55,6 +63,13 @@ describe('BooksService', () => {
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
     getManyAndCount: jest.fn().mockResolvedValue([mockBooks, 2]),
+  };
+
+  const reviewQueryBuilderMock = {
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    getRawOne: jest.fn().mockResolvedValue({ averageRating: '4.5', totalReviews: '2' }),
   };
 
   beforeEach(async () => {
@@ -81,12 +96,19 @@ describe('BooksService', () => {
             delete: jest.fn().mockResolvedValue({}),
           },
         },
+        {
+          provide: getRepositoryToken(Review),
+          useValue: {
+            createQueryBuilder: jest.fn().mockReturnValue(reviewQueryBuilderMock),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<BooksService>(BooksService);
     bookRepository = module.get<Repository<Book>>(getRepositoryToken(Book));
     bookGenreRepository = module.get<Repository<BookGenre>>(getRepositoryToken(BookGenre));
+    reviewRepository = module.get<Repository<Review>>(getRepositoryToken(Review));
   });
 
   afterEach(() => {
@@ -160,7 +182,7 @@ describe('BooksService', () => {
       expect(bookRepository.findAndCount).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        relations: ['bookGenres', 'bookGenres.genre'],
+        relations: ['bookGenres', 'bookGenres.genre', 'reviews'],
       });
       expect(result).toEqual({ books: mockBooks, total: 2 });
     });
@@ -171,7 +193,7 @@ describe('BooksService', () => {
       expect(bookRepository.findAndCount).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        relations: ['bookGenres', 'bookGenres.genre'],
+        relations: ['bookGenres', 'bookGenres.genre', 'reviews'],
       });
       expect(result).toEqual({ books: mockBooks, total: 2 });
     });
@@ -182,7 +204,7 @@ describe('BooksService', () => {
       expect(bookRepository.findAndCount).toHaveBeenCalledWith({
         skip: 5,
         take: 10,
-        relations: ['bookGenres', 'bookGenres.genre'],
+        relations: ['bookGenres', 'bookGenres.genre', 'reviews'],
       });
       expect(result).toEqual({ books: mockBooks, total: 2 });
     });
@@ -272,6 +294,7 @@ describe('BooksService', () => {
       jest.spyOn(service, 'findOne').mockResolvedValueOnce({
         ...mockBook,
         title: 'Updated Book',
+        calculateAverageRating: jest.fn(),
       });
 
       const result = await service.update('123e4567-e89b-12d3-a456-426614174000', updateBookDto);
@@ -284,6 +307,7 @@ describe('BooksService', () => {
       expect(result).toEqual({
         ...mockBook,
         title: 'Updated Book',
+        calculateAverageRating: expect.any(Function),
       });
     });
 
@@ -297,6 +321,7 @@ describe('BooksService', () => {
       jest.spyOn(service, 'findOne').mockResolvedValueOnce({
         ...mockBookWithGenres,
         title: 'Updated Book',
+        calculateAverageRating: jest.fn(),
       });
 
       const result = await service.update('123e4567-e89b-12d3-a456-426614174000', updateBookDto);
@@ -315,6 +340,7 @@ describe('BooksService', () => {
       expect(result).toEqual({
         ...mockBookWithGenres,
         title: 'Updated Book',
+        calculateAverageRating: expect.any(Function),
       });
     });
   });
@@ -328,6 +354,31 @@ describe('BooksService', () => {
       expect(service.findOne).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000');
       expect(bookGenreRepository.delete).toHaveBeenCalledWith({ bookId: '123e4567-e89b-12d3-a456-426614174000' });
       expect(bookRepository.remove).toHaveBeenCalledWith(mockBook);
+    });
+  });
+  
+  describe('calculateBookRatingStats', () => {
+    it('should calculate average rating and total reviews for a book', async () => {
+      const bookId = '123e4567-e89b-12d3-a456-426614174000';
+      
+      const result = await service.calculateBookRatingStats(bookId);
+      
+      expect(reviewRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(reviewQueryBuilderMock.select).toHaveBeenCalledWith('AVG(review.rating)', 'averageRating');
+      expect(reviewQueryBuilderMock.addSelect).toHaveBeenCalledWith('COUNT(review.id)', 'totalReviews');
+      expect(reviewQueryBuilderMock.where).toHaveBeenCalledWith('review.bookId = :bookId', { bookId });
+      expect(reviewQueryBuilderMock.getRawOne).toHaveBeenCalled();
+      expect(result).toEqual({ averageRating: 4.5, totalReviews: 2 });
+    });
+    
+    it('should return zero values when no reviews exist', async () => {
+      const bookId = '123e4567-e89b-12d3-a456-426614174000';
+      
+      jest.spyOn(reviewQueryBuilderMock, 'getRawOne').mockResolvedValueOnce({});
+      
+      const result = await service.calculateBookRatingStats(bookId);
+      
+      expect(result).toEqual({ averageRating: 0, totalReviews: 0 });
     });
   });
 });
