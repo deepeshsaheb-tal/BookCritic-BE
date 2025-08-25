@@ -29,6 +29,7 @@ describe('UsersService', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     reviews: [],
+    favorites: [],
   };
 
   const mockUsers = [

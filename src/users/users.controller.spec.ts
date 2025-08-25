@@ -20,6 +20,7 @@ describe('UsersController', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     reviews: [],
+    favorites: [],
   };
 
   const mockUsers = [

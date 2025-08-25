@@ -21,6 +21,7 @@ describe('AuthService', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     reviews: [],
+    favorites: [], // Adding favorites property for the User entity
   };
 
   beforeEach(async () => {

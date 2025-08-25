@@ -16,6 +16,7 @@ describe('JwtStrategy', () => {
     passwordHash: 'hashedPassword',
     lastLogin: new Date(),
     reviews: [],
+    favorites: [], // Adding favorites property for the User entity
     createdAt: new Date(),
     updatedAt: new Date(),
     role: 'user', // Adding this for the test even though it's not in the entity

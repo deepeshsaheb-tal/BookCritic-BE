@@ -1,6 +1,7 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { Review } from '../../reviews/entities/review.entity';
+import { UserFavorite } from '../../favorites/entities/user-favorite.entity';
 import { Exclude } from 'class-transformer';
 
 /**
@@ -26,4 +27,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Review, (review) => review.user)
   reviews: Review[];
+
+  @OneToMany(() => UserFavorite, (userFavorite) => userFavorite.user)
+  favorites: UserFavorite[];
 }

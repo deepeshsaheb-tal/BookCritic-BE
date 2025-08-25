@@ -7,6 +7,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { GenresModule } from './genres/genres.module';
 import { AuthModule } from './auth/auth.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
+import { FavoritesModule } from './favorites/favorites.module';
 import { HealthModule } from './common/health/health.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
 
@@ -28,6 +29,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     GenresModule,
     AuthModule,
     RecommendationsModule,
+    FavoritesModule,
     HealthModule,
   ],
   controllers: [],

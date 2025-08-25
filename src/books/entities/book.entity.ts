@@ -2,6 +2,7 @@ import { Column, Entity, OneToMany, AfterLoad } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { BookGenre } from './book-genre.entity';
+import { UserFavorite } from '../../favorites/entities/user-favorite.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
@@ -32,6 +33,9 @@ export class Book extends BaseEntity {
 
   @OneToMany(() => BookGenre, (bookGenre) => bookGenre.book)
   bookGenres: BookGenre[];
+
+  @OneToMany(() => UserFavorite, (userFavorite) => userFavorite.book)
+  favoritedBy: UserFavorite[];
   
   /**
    * Average rating of the book (calculated from reviews)

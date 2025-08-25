@@ -39,6 +39,7 @@ describe('RecommendationsService', () => {
     updatedAt: new Date(),
     bookGenres: [mockBookGenre as BookGenre],
     reviews: [],
+    favoritedBy: [], // Adding favoritedBy property for the Book entity
   };
 
   const mockReview: Partial<Review> = {
@@ -60,6 +61,7 @@ describe('RecommendationsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       reviews: [],
+      favorites: [], // Adding favorites property for the User entity
     } as User,
   };
 

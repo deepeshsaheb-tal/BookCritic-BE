@@ -33,6 +33,7 @@ describe('ReviewsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       reviews: [],
+      favorites: [],
     },
     book: {
       id: '123e4567-e89b-12d3-a456-426614174001',
@@ -46,6 +47,7 @@ describe('ReviewsService', () => {
       updatedAt: new Date(),
       bookGenres: [],
       reviews: [],
+      favoritedBy: [],
       averageRating: 4.5,
       totalReviews: 2,
       calculateAverageRating: jest.fn(),
