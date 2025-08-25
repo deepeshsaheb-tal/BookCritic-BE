@@ -15,6 +15,23 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
+    // Get the request object
+    const request = context.switchToHttp().getRequest();
+    const authHeader = request.headers.authorization;
+    console.log('Auth header:', authHeader);
+    
+    // More detailed debugging
+    console.log('Request path:', request.path);
+    console.log('All headers:', JSON.stringify(request.headers));
+    
+    if (!authHeader) {
+      console.log('No Authorization header found');
+    } else if (!authHeader.startsWith('Bearer ')) {
+      console.log('Authorization header does not start with Bearer');
+    } else {
+      console.log('Bearer token found with length:', authHeader.substring(7).length);
+    }
+    
     return super.canActivate(context);
   }
 

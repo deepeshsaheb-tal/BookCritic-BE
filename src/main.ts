@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule } from './app.module';  // Path is correct, but TypeScript can't find it
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as dotenv from 'dotenv';
@@ -41,7 +41,7 @@ async function bootstrap(): Promise<void> {
   const port = process.env.PORT || 3001;
   await app.listen(port);
   logger.log(`Application is running on: http://localhost:${port}/api/v1`);
-  logger.log(`Swagger documentation available at: http://localhost:${port}/api/docs`);
+  logger.log(`Swagger documentation available at: http://localhost:${port}/api-docs`);
 }
 
 bootstrap().catch((err) => {

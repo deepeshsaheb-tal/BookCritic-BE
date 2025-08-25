@@ -15,11 +15,9 @@ export function setupSwagger(app: INestApplication): void {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
+        description: 'Enter JWT token WITHOUT Bearer prefix',
       },
-      'JWT-auth',
+      'access-token',
     )
     .addTag('auth', 'Authentication endpoints')
     .addTag('users', 'User management endpoints')
@@ -31,7 +29,7 @@ export function setupSwagger(app: INestApplication): void {
     .build();
 
   const document = SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup('api/docs', app, document, {
+  SwaggerModule.setup('api-docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
     },
