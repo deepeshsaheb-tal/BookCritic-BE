@@ -39,7 +39,7 @@ export class GenresController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new genre' })
   @ApiResponse({ 
     status: 201, 
@@ -89,7 +89,7 @@ export class GenresController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a genre' })
   @ApiParam({ name: 'id', description: 'Genre ID' })
   @ApiResponse({ 
@@ -114,7 +114,7 @@ export class GenresController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a genre' })
   @ApiParam({ name: 'id', description: 'Genre ID' })

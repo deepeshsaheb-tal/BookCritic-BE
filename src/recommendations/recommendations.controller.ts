@@ -33,7 +33,7 @@ export class RecommendationsController {
    */
   @Get('for-me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get personalized book recommendations' })
   @ApiQuery({ 
     name: 'limit', 

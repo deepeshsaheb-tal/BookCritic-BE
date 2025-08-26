@@ -43,7 +43,7 @@ export class BooksController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new book' })
   @ApiResponse({ 
     status: 201, 
@@ -141,7 +141,7 @@ export class BooksController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a book' })
   @ApiParam({ name: 'id', description: 'Book ID' })
   @ApiResponse({ 
@@ -166,7 +166,7 @@ export class BooksController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a book' })
   @ApiParam({ name: 'id', description: 'Book ID' })

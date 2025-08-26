@@ -41,7 +41,7 @@ export class ReviewsController {
    */
   @Post()
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new review' })
   @ApiResponse({ 
     status: 201, 
@@ -173,7 +173,7 @@ export class ReviewsController {
    */
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a review' })
   @ApiParam({ name: 'id', description: 'Review ID' })
   @ApiResponse({ 
@@ -198,7 +198,7 @@ export class ReviewsController {
    */
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a review' })
   @ApiParam({ name: 'id', description: 'Review ID' })
