@@ -8,7 +8,7 @@ import { UserFavorite } from './entities/user-favorite.entity';
  * Controller for managing user favorites
  */
 @ApiTags('favorites')
-@Controller('api/v1/favorites')
+@Controller('favorites')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class FavoritesController {
@@ -72,6 +72,39 @@ export class FavoritesController {
   @ApiResponse({ status: 200, description: 'List of favorite books', type: [UserFavorite] })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getUserFavorites(@Request() req: any): Promise<UserFavorite[]> {
-    return this.favoritesService.getUserFavorites(req.user.id);
+    const favorites = await this.favoritesService.getUserFavorites(req.user.id);
+    
+    // Process each favorite to ensure book data is properly formatted
+    return favorites.map(favorite => {
+      // Skip processing if book is null
+      if (!favorite.book) {
+        console.warn(`Book is null for favorite with bookId: ${favorite.bookId}`);
+        return favorite;
+      }
+      
+      // Calculate average rating and total reviews
+      if (favorite.book.reviews) {
+        favorite.book.calculateAverageRating();
+      } else {
+        favorite.book.averageRating = 0;
+        favorite.book.totalReviews = 0;
+      }
+      
+      // Transform book genres to string array for frontend compatibility
+      const genres: string[] = [];
+      if (favorite.book.bookGenres && favorite.book.bookGenres.length > 0) {
+        favorite.book.bookGenres.forEach(bg => {
+          if (bg.genre && bg.genre.name) {
+            genres.push(bg.genre.name);
+          }
+        });
+      }
+      (favorite.book as any).genres = genres;
+      
+      // Ensure all required properties are present
+      if (!favorite.book.id) favorite.book.id = favorite.bookId;
+      
+      return favorite;
+    });
   }
 }

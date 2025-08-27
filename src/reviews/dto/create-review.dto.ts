@@ -9,7 +9,6 @@ export class CreateReviewDto {
     description: 'ID of the book being reviewed',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @IsUUID('4', { message: 'Book ID must be a valid UUID' })
   @IsNotEmpty({ message: 'Book ID is required' })
   readonly bookId: string;
 

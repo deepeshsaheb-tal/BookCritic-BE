@@ -87,9 +87,33 @@ export class FavoritesService {
     // Check if user exists
     await this.usersService.findOne(userId);
     
-    return this.userFavoriteRepository.find({
-      where: { userId },
-      relations: ['book', 'book.bookGenres', 'book.bookGenres.genre'],
-    });
+    // Use query builder for more control over the query and eager loading
+    const favorites = await this.userFavoriteRepository
+      .createQueryBuilder('favorite')
+      .leftJoinAndSelect('favorite.book', 'book')
+      .leftJoinAndSelect('book.bookGenres', 'bookGenres')
+      .leftJoinAndSelect('bookGenres.genre', 'genre')
+      .leftJoinAndSelect('book.reviews', 'reviews')
+      .where('favorite.userId = :userId', { userId })
+      .getMany();
+    
+    // Verify that books are properly loaded
+    if (favorites.length > 0 && !favorites.some(f => f.book)) {
+      // If books are still null, try to fetch them directly
+      for (const favorite of favorites) {
+        if (!favorite.book) {
+          try {
+            // Attempt to load the book directly
+            const book = await this.booksService.findOne(favorite.bookId);
+            favorite.book = book;
+          } catch (error) {
+            // Log the error but continue processing other favorites
+            console.error(`Failed to load book ${favorite.bookId} for favorite: ${error.message}`);
+          }
+        }
+      }
+    }
+    
+    return favorites;
   }
 }
