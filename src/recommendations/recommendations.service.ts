@@ -31,42 +31,68 @@ export class RecommendationsService {
   async getRecommendationsForUser(userId: string, limit = 10): Promise<Book[]> {
     this.logger.log(`Getting recommendations for user ${userId}`);
 
-    // Get the user's reviews to understand their preferences
-    const userReviews = await this.reviewsRepository.find({
-      where: { userId },
-      relations: ['book', 'book.bookGenres', 'book.bookGenres.genre'],
-    });
+    try {
+      // Get the user's reviews to understand their preferences
+      const userReviews = await this.reviewsRepository.find({
+        where: { userId },
+        relations: ['book', 'book.bookGenres', 'book.bookGenres.genre'],
+      });
 
-    if (userReviews.length === 0) {
-      this.logger.log(`User ${userId} has no reviews, returning popular books`);
+      if (userReviews.length === 0) {
+        this.logger.log(`User ${userId} has no reviews, returning popular books`);
+        return this.getPopularBooks(limit);
+      }
+
+      // Extract genres the user has shown interest in (from books they rated highly)
+      const preferredGenreIds = this.extractPreferredGenres(userReviews);
+      
+      // Get books the user has already reviewed (to exclude from recommendations)
+      const reviewedBookIds = userReviews.map(review => review.bookId);
+
+      // Find books in the user's preferred genres that they haven't reviewed yet
+      // Using a simpler approach with find() instead of query builder
+      let recommendedBooks: Book[] = [];
+      
+      if (preferredGenreIds.length > 0) {
+        // Get books with the preferred genres
+        const books = await this.booksRepository.find({
+          relations: ['bookGenres', 'bookGenres.genre', 'reviews'],
+        });
+        
+        // Filter books manually to avoid complex query issues
+        recommendedBooks = books
+          .filter(book => {
+            // Check if book has any of the preferred genres
+            const hasPreferredGenre = book.bookGenres.some(bg => 
+              preferredGenreIds.includes(bg.genreId)
+            );
+            
+            // Check if user hasn't reviewed this book
+            const notReviewed = !reviewedBookIds.includes(book.id);
+            
+            return hasPreferredGenre && notReviewed;
+          })
+          // Sort by average rating (highest first)
+          .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+          // Limit to requested number
+          .slice(0, limit);
+      }
+
+      // If we don't have enough recommendations, supplement with popular books
+      if (recommendedBooks.length < limit) {
+        const additionalBooks = await this.getPopularBooks(
+          limit - recommendedBooks.length, 
+          [...reviewedBookIds, ...recommendedBooks.map(book => book.id)]
+        );
+        recommendedBooks.push(...additionalBooks);
+      }
+
+      return recommendedBooks;
+    } catch (error) {
+      this.logger.error(`Error getting recommendations for user ${userId}:`, error);
+      // Fallback to popular books if there's an error
       return this.getPopularBooks(limit);
     }
-
-    // Extract genres the user has shown interest in (from books they rated highly)
-    const preferredGenreIds = this.extractPreferredGenres(userReviews);
-    
-    // Get books the user has already reviewed (to exclude from recommendations)
-    const reviewedBookIds = userReviews.map(review => review.bookId);
-
-    // Find books in the user's preferred genres that they haven't reviewed yet
-    const recommendedBooks = await this.booksRepository
-      .createQueryBuilder('book')
-      .leftJoinAndSelect('book.bookGenres', 'bookGenre')
-      .leftJoinAndSelect('bookGenre.genre', 'genre')
-      .leftJoinAndSelect('book.reviews', 'review')
-      .where('bookGenre.genreId IN (:...genreIds)', { genreIds: preferredGenreIds })
-      .andWhere('book.id NOT IN (:...reviewedBookIds)', { reviewedBookIds })
-      .orderBy('book.averageRating', 'DESC')
-      .take(limit)
-      .getMany();
-
-    // If we don't have enough recommendations, supplement with popular books
-    if (recommendedBooks.length < limit) {
-      const additionalBooks = await this.getPopularBooks(limit - recommendedBooks.length, reviewedBookIds);
-      recommendedBooks.push(...additionalBooks);
-    }
-
-    return recommendedBooks;
   }
 
   /**
@@ -78,37 +104,30 @@ export class RecommendationsService {
   async getPopularBooks(limit = 10, excludeBookIds: string[] = []): Promise<Book[]> {
     this.logger.log('Getting popular books');
 
-    const query = this.booksRepository
-      .createQueryBuilder('book')
-      .leftJoinAndSelect('book.bookGenres', 'bookGenre')
-      .leftJoinAndSelect('bookGenre.genre', 'genre')
-      .leftJoinAndSelect('book.reviews', 'review')
-      .select([
-        'book.id',
-        'book.title',
-        'book.author',
-        'book.isbn',
-        'book.description',
-        'book.publishedDate',
-        'book.coverImageUrl',
-        'bookGenre',
-        'genre',
-      ])
-      .addSelect('COUNT(review.id)', 'reviewCount')
-      .addSelect('AVG(review.rating)', 'averageRating')
-      .groupBy('book.id')
-      .addGroupBy('bookGenre.bookId')
-      .addGroupBy('bookGenre.genreId')
-      .addGroupBy('genre.id')
-      .orderBy('averageRating', 'DESC')
-      .addOrderBy('reviewCount', 'DESC')
-      .take(limit);
+    try {
+      // Use a simpler approach with find() instead of query builder
+      const books = await this.booksRepository.find({
+        relations: ['bookGenres', 'bookGenres.genre', 'reviews'],
+      });
 
-    if (excludeBookIds.length > 0) {
-      query.andWhere('book.id NOT IN (:...excludeBookIds)', { excludeBookIds });
+      // Filter, sort, and limit the books manually
+      return books
+        .filter(book => !excludeBookIds.includes(book.id))
+        // Sort by average rating (highest first)
+        .sort((a, b) => {
+          // First by average rating
+          const ratingDiff = (b.averageRating || 0) - (a.averageRating || 0);
+          if (ratingDiff !== 0) return ratingDiff;
+          
+          // Then by number of reviews
+          return (b.totalReviews || 0) - (a.totalReviews || 0);
+        })
+        // Limit to requested number
+        .slice(0, limit);
+    } catch (error) {
+      this.logger.error('Error getting popular books:', error);
+      return [];
     }
-
-    return query.getMany();
   }
 
   /**
@@ -120,32 +139,47 @@ export class RecommendationsService {
   async getSimilarBooks(bookId: string, limit = 5): Promise<Book[]> {
     this.logger.log(`Getting similar books for book ${bookId}`);
 
-    // Get the book's genres
-    const book = await this.booksRepository.findOne({
-      where: { id: bookId },
-      relations: ['bookGenres'],
-    });
+    try {
+      // Get the book's genres
+      const book = await this.booksRepository.findOne({
+        where: { id: bookId },
+        relations: ['bookGenres'],
+      });
 
-    if (!book) {
-      this.logger.warn(`Book ${bookId} not found`);
+      if (!book) {
+        this.logger.warn(`Book ${bookId} not found`);
+        return [];
+      }
+
+      const genreIds = book.bookGenres.map(bg => bg.genreId);
+      
+      if (genreIds.length === 0) {
+        this.logger.warn(`Book ${bookId} has no genres`);
+        return [];
+      }
+
+      // Get all books with their relations
+      const allBooks = await this.booksRepository.find({
+        relations: ['bookGenres', 'bookGenres.genre', 'reviews'],
+      });
+      
+      // Filter, sort, and limit the books manually
+      return allBooks
+        .filter(b => {
+          // Exclude the source book
+          if (b.id === bookId) return false;
+          
+          // Check if book has any matching genres
+          return b.bookGenres.some(bg => genreIds.includes(bg.genreId));
+        })
+        // Sort by average rating (highest first)
+        .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+        // Limit to requested number
+        .slice(0, limit);
+    } catch (error) {
+      this.logger.error(`Error getting similar books for book ${bookId}:`, error);
       return [];
     }
-
-    const genreIds = book.bookGenres.map(bg => bg.genreId);
-
-    // Find books in the same genres
-    const similarBooks = await this.booksRepository
-      .createQueryBuilder('book')
-      .leftJoinAndSelect('book.bookGenres', 'bookGenre')
-      .leftJoinAndSelect('bookGenre.genre', 'genre')
-      .leftJoinAndSelect('book.reviews', 'review')
-      .where('bookGenre.genreId IN (:...genreIds)', { genreIds })
-      .andWhere('book.id != :bookId', { bookId })
-      .orderBy('book.averageRating', 'DESC')
-      .take(limit)
-      .getMany();
-
-    return similarBooks;
   }
 
   /**
