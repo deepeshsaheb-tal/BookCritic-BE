@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookcritic-backend
+  namespace: bookcritic
+  labels:
+    app: bookcritic-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookcritic-backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: bookcritic-backend
+    spec:
+      containers:
+      - name: bookcritic-backend
+        image: ${ECR_REPOSITORY_URI}:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        envFrom:
+        - configMapRef:
+            name: bookcritic-backend-config
+        - secretRef:
+            name: bookcritic-backend-secret
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+      nodeSelector:
+        kubernetes.io/os: linux

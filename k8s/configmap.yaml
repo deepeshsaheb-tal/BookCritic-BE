@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bookcritic-backend-config
+  namespace: bookcritic
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  DATABASE_HOST: "${DATABASE_HOST}"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "bookcritic"
+  DATABASE_USER: "postgres"
+  JWT_EXPIRATION: "3600"
+  LOG_LEVEL: "info"

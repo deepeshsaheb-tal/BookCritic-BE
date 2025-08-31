@@ -1,0 +1,143 @@
+name: BookCritic Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'BookCritic-BE/**'
+      - '.github/workflows/backend-ci-cd.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'BookCritic-BE/**'
+      - '.github/workflows/backend-ci-cd.yml'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: bookcritic-backend
+  EKS_CLUSTER_NAME: bookcritic-eks-cluster
+  KUBE_NAMESPACE: bookcritic
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'BookCritic-BE/package-lock.json'
+          
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./BookCritic-BE
+        
+      - name: Run linting
+        run: npm run lint
+        working-directory: ./BookCritic-BE
+        
+      - name: Run tests
+        run: npm test
+        working-directory: ./BookCritic-BE
+        
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: ./BookCritic-BE/coverage
+          
+  build-and-deploy:
+    name: Build and Deploy
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./BookCritic-BE
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          
+      - name: Update kube config
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+        
+      - name: Deploy to EKS
+        run: |
+          # Replace image in deployment yaml
+          sed -i "s|image: .*|image: ${{ steps.build-image.outputs.image }}|g" ./BookCritic-BE/k8s/deployment.yaml
+          
+          # Apply Kubernetes manifests
+          kubectl apply -f ./BookCritic-BE/k8s/namespace.yaml
+          kubectl apply -f ./BookCritic-BE/k8s/configmap.yaml
+          kubectl apply -f ./BookCritic-BE/k8s/secret.yaml
+          kubectl apply -f ./BookCritic-BE/k8s/deployment.yaml
+          kubectl apply -f ./BookCritic-BE/k8s/service.yaml
+          kubectl apply -f ./BookCritic-BE/k8s/ingress.yaml
+          
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/bookcritic-backend -n ${{ env.KUBE_NAMESPACE }}
+          
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./BookCritic-BE/terraform
+        
+      - name: Terraform Format
+        run: terraform fmt -check
+        working-directory: ./BookCritic-BE/terraform
+        
+      - name: Terraform Plan
+        run: terraform plan -var="db_password=${{ secrets.DB_PASSWORD }}"
+        working-directory: ./BookCritic-BE/terraform
+        
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}"
+        working-directory: ./BookCritic-BE/terraform
