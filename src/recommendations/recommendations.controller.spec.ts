@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RecommendationsController } from './recommendations.controller';
+import { RecommendationsController, RecommendationType } from './recommendations.controller';
 import { RecommendationsService } from './recommendations.service';
 import { Book } from '../books/entities/book.entity';
 
@@ -44,6 +44,10 @@ describe('RecommendationsController', () => {
             getRecommendationsForUser: jest.fn().mockResolvedValue(mockBooks),
             getPopularBooks: jest.fn().mockResolvedValue(mockBooks),
             getSimilarBooks: jest.fn().mockResolvedValue(mockBooks),
+            getTopRatedBooks: jest.fn().mockResolvedValue(mockBooks),
+            getLLMRecommendations: jest.fn().mockResolvedValue(mockBooks),
+            getGenreBasedRecommendations: jest.fn().mockResolvedValue(mockBooks),
+            getFavoriteBasedRecommendations: jest.fn().mockResolvedValue(mockBooks),
           },
         },
       ],
@@ -65,26 +69,85 @@ describe('RecommendationsController', () => {
         },
       };
 
-      const result = await controller.getRecommendationsForUser(req, 10);
+      const result = await controller.getRecommendationsForUser(req, 10, RecommendationType.ALL);
 
       expect(service.getRecommendationsForUser).toHaveBeenCalledWith(
         '123e4567-e89b-12d3-a456-426614174003',
-        10
+        10,
+        RecommendationType.ALL
       );
       expect(result).toEqual(mockBooks);
     });
 
-    it('should use default limit if not provided', async () => {
+    it('should use default limit and type if not provided', async () => {
       const req = {
         user: {
           id: '123e4567-e89b-12d3-a456-426614174003',
         },
       };
       
-      // Directly call the service with the default value
-      await controller.getRecommendationsForUser(req, 10);
+      // Directly call the service with the default values
+      await controller.getRecommendationsForUser(req, 10, RecommendationType.ALL);
 
       expect(service.getRecommendationsForUser).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174003',
+        10,
+        RecommendationType.ALL
+      );
+    });
+    
+    it('should return genre-based recommendations when type is genre', async () => {
+      const req = {
+        user: {
+          id: '123e4567-e89b-12d3-a456-426614174003',
+        },
+      };
+
+      await controller.getRecommendationsForUser(req, 10, RecommendationType.GENRE_BASED);
+
+      expect(service.getGenreBasedRecommendations).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174003',
+        10
+      );
+    });
+    
+    it('should return favorite-based recommendations when type is favorite', async () => {
+      const req = {
+        user: {
+          id: '123e4567-e89b-12d3-a456-426614174003',
+        },
+      };
+
+      await controller.getRecommendationsForUser(req, 10, RecommendationType.FAVORITE_BASED);
+
+      expect(service.getFavoriteBasedRecommendations).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174003',
+        10
+      );
+    });
+    
+    it('should return top-rated recommendations when type is top-rated', async () => {
+      const req = {
+        user: {
+          id: '123e4567-e89b-12d3-a456-426614174003',
+        },
+      };
+
+      await controller.getRecommendationsForUser(req, 10, RecommendationType.TOP_RATED);
+
+      expect(service.getTopRatedBooks).toHaveBeenCalledWith(10, []);
+    });
+    
+    it('should return LLM-based recommendations when type is llm', async () => {
+      const req = {
+        user: {
+          id: '123e4567-e89b-12d3-a456-426614174003',
+        },
+      };
+
+      await controller.getRecommendationsForUser(req, 10, RecommendationType.LLM_BASED);
+
+      expect(service.getLLMRecommendations).toHaveBeenCalledWith(
         '123e4567-e89b-12d3-a456-426614174003',
         10
       );

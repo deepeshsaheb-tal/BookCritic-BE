@@ -35,6 +35,7 @@ describe('GenresController', () => {
           coverImageUrl: 'http://example.com/cover.jpg',
           bookGenres: [],
           reviews: [],
+          favoritedBy: [],
           createdAt: new Date(),
           updatedAt: new Date(),
           averageRating: 0,
