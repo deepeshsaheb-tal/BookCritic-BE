@@ -112,3 +112,21 @@ variable "frontend_bucket_name" {
   type        = string
   default     = "bookcritic-frontend-assets"
 }
+
+variable "key_name" {
+  description = "Name of the key pair to use for SSH access to the bastion host"
+  type        = string
+  default     = "bookcritic-key"
+}
+
+variable "ecr_repository_name" {
+  description = "Name of the ECR repository for container images"
+  type        = string
+  default     = "bookcritic-backend"
+}
+
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
+  type        = string
+  default     = "dev"
+}

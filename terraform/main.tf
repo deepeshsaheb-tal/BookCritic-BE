@@ -119,7 +119,7 @@ module "vpc" {
 module "rds" {
   source = "./modules/rds"
   vpc_id = module.vpc.vpc_id
-  subnet_ids = module.vpc.database_subnets
+  subnet_ids = module.vpc.public_subnets
   db_name = var.db_name
   db_username = var.db_username
   db_password = var.db_password
@@ -137,3 +137,19 @@ module "s3" {
 #   source = "./modules/monitoring"
 #   cluster_name = var.cluster_name
 # }
+
+# Create bastion host for RDS access
+module "bastion" {
+  source = "./modules/bastion"
+  vpc_id = module.vpc.vpc_id
+  subnet_id = module.vpc.public_subnets[0]
+  key_name = var.key_name
+  rds_security_group_id = module.rds.db_security_group_id
+}
+
+# Create ECR repository for container images
+module "ecr" {
+  source = "./modules/ecr"
+  repository_name = var.ecr_repository_name
+  environment = var.environment
+}
