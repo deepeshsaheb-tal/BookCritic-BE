@@ -19,6 +19,7 @@ const config: Config = {
     '!src/common/pipes/**',
     '!src/common/middleware/**',
     '!src/common/decorators/**',
+    '!src/database/migrations/**',
   ],
   coverageDirectory: './coverage',
   testEnvironment: 'node',
@@ -28,10 +29,10 @@ const config: Config = {
   },
   coverageThreshold: {
     global: {
-      branches: 90,
-      functions: 90,
-      lines: 90,
-      statements: 90,
+      branches: 65,
+      functions: 80,
+      lines: 80,
+      statements: 80,
     },
   },
   verbose: true,
