@@ -115,6 +115,6 @@ jobs:
     
     - name: Deploy to EC2
       run: |
-        rsync -avz --delete dist/ ec2-user@${{ steps.get-ip.outputs.EC2_IP }}:/home/ec2-user/bookcritic-backend/dist/
-        rsync -avz package*.json ec2-user@${{ steps.get-ip.outputs.EC2_IP }}:/home/ec2-user/bookcritic-backend/
-        ssh ec2-user@${{ steps.get-ip.outputs.EC2_IP }} "cd /home/ec2-user/bookcritic-backend && npm ci --production && pm2 restart bookcritic || pm2 start dist/main.js --name bookcritic"
+        rsync -avz --delete dist/ ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/dist/
+        rsync -avz package*.json ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/
+        ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "cd /home/ubuntu/bookcritic-backend && npm ci --production && pm2 restart bookcritic || pm2 start dist/main.js --name bookcritic"

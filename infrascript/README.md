@@ -105,10 +105,10 @@ After the deployment completes, Terraform will output important information:
 
 ```bash
 # SSH into your EC2 instance
-ssh -i your-key.pem ec2-user@<EC2_PUBLIC_IP>
+ssh -i your-key.pem ubuntu@<EC2_PUBLIC_IP>
 
 # Pull the latest code
-cd /home/ec2-user/bookcritic-backend
+cd /home/ubuntu/bookcritic-backend
 git pull
 
 # Install dependencies and build
@@ -133,7 +133,7 @@ aws s3 sync build/ s3://your-bucket-name --delete
 
 Basic monitoring is set up on the EC2 instance:
 - A cron job runs every 5 minutes to check if services are running
-- System metrics are logged to `/home/ec2-user/system_metrics.log`
+- System metrics are logged to `/home/ubuntu/system_metrics.log`
 
 ## Cleanup
 

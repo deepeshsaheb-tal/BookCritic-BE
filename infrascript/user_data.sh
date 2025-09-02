@@ -18,7 +18,7 @@ systemctl enable nginx
 systemctl start nginx
 
 # Clone the backend repository
-cd /home/ec2-user
+cd /home/ubuntu
 git clone ${github_repo} bookcritic-backend
 cd bookcritic-backend
 
@@ -68,7 +68,7 @@ rm -f /etc/nginx/conf.d/default.conf
 systemctl restart nginx
 
 # Set up basic monitoring script
-cat > /home/ec2-user/monitor.sh << 'EOF'
+cat > /home/ubuntu/monitor.sh << 'EOF'
 #!/bin/bash
 
 # Check if Node.js process is running
@@ -84,13 +84,13 @@ if ! systemctl is-active --quiet nginx; then
 fi
 
 # Log system metrics
-echo "$(date) - Memory usage: $(free -m | awk 'NR==2{printf "%.2f%%", $3*100/$2}')" >> /home/ec2-user/system_metrics.log
-echo "$(date) - Disk usage: $(df -h / | awk 'NR==2{print $5}')" >> /home/ec2-user/system_metrics.log
+echo "$(date) - Memory usage: $(free -m | awk 'NR==2{printf "%.2f%%", $3*100/$2}')" >> /home/ubuntu/system_metrics.log
+echo "$(date) - Disk usage: $(df -h / | awk 'NR==2{print $5}')" >> /home/ubuntu/system_metrics.log
 EOF
 
-chmod +x /home/ec2-user/monitor.sh
+chmod +x /home/ubuntu/monitor.sh
 
 # Add cron job to run monitoring script every 5 minutes
-(crontab -l 2>/dev/null; echo "*/5 * * * * /home/ec2-user/monitor.sh") | crontab -
+(crontab -l 2>/dev/null; echo "*/5 * * * * /home/ubuntu/monitor.sh") | crontab -
 
 echo "Backend setup completed successfully!"
