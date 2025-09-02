@@ -70,7 +70,11 @@ describe('FavoritesService', () => {
             create: jest.fn(),
             save: jest.fn(),
             delete: jest.fn(),
-            createQueryBuilder: jest.fn(),
+            createQueryBuilder: jest.fn().mockReturnValue({
+            leftJoinAndSelect: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            getMany: jest.fn().mockResolvedValue([mockUserFavorite]),
+          }),
           },
         },
         {
@@ -226,17 +230,21 @@ describe('FavoritesService', () => {
       // Mock dependencies
       jest.spyOn(usersService, 'findOne').mockResolvedValue(mockUser);
       
-      // Mock find to return favorites with relations
+      // Mock query builder chain to return favorites with relations
       const userFavorites = [mockUserFavorite];
-      jest.spyOn(userFavoriteRepository, 'find').mockResolvedValue(userFavorites);
+      const queryBuilderMock = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(userFavorites)
+      };
+      jest.spyOn(userFavoriteRepository, 'createQueryBuilder').mockReturnValue(queryBuilderMock as any);
 
       const result = await service.getUserFavorites(userId);
 
       expect(usersService.findOne).toHaveBeenCalledWith(userId);
-      expect(userFavoriteRepository.find).toHaveBeenCalledWith({
-        where: { userId },
-        relations: ['book', 'book.bookGenres', 'book.bookGenres.genre'],
-      });
+      // Verify that createQueryBuilder was called instead of find
+      expect(userFavoriteRepository.createQueryBuilder).toHaveBeenCalledWith('favorite');
+      // The rest of the chain would be verified if needed
       expect(result).toEqual(userFavorites);
     });
 

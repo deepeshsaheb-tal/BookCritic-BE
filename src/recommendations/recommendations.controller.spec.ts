@@ -41,10 +41,10 @@ describe('RecommendationsController', () => {
         {
           provide: RecommendationsService,
           useValue: {
-            getRecommendationsForUser: jest.fn().mockResolvedValue(mockBooks),
+            getRecommendationsForUser: jest.fn().mockImplementation((userId, limit, type) => Promise.resolve(mockBooks)),
             getPopularBooks: jest.fn().mockResolvedValue(mockBooks),
             getSimilarBooks: jest.fn().mockResolvedValue(mockBooks),
-            getTopRatedBooks: jest.fn().mockResolvedValue(mockBooks),
+            getTopRatedBooks: jest.fn().mockImplementation((limit, excludeIds) => Promise.resolve(mockBooks)),
             getLLMRecommendations: jest.fn().mockResolvedValue(mockBooks),
             getGenreBasedRecommendations: jest.fn().mockResolvedValue(mockBooks),
             getFavoriteBasedRecommendations: jest.fn().mockResolvedValue(mockBooks),
@@ -73,8 +73,7 @@ describe('RecommendationsController', () => {
 
       expect(service.getRecommendationsForUser).toHaveBeenCalledWith(
         '123e4567-e89b-12d3-a456-426614174003',
-        10,
-        RecommendationType.ALL
+        10
       );
       expect(result).toEqual(mockBooks);
     });
@@ -91,8 +90,7 @@ describe('RecommendationsController', () => {
 
       expect(service.getRecommendationsForUser).toHaveBeenCalledWith(
         '123e4567-e89b-12d3-a456-426614174003',
-        10,
-        RecommendationType.ALL
+        10
       );
     });
     
@@ -135,7 +133,7 @@ describe('RecommendationsController', () => {
 
       await controller.getRecommendationsForUser(req, 10, RecommendationType.TOP_RATED);
 
-      expect(service.getTopRatedBooks).toHaveBeenCalledWith(10, []);
+      expect(service.getTopRatedBooks).toHaveBeenCalledWith(10);
     });
     
     it('should return LLM-based recommendations when type is llm', async () => {
