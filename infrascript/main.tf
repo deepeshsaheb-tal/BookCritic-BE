@@ -197,7 +197,7 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_parameter_group" "main" {
-  name   = "${var.project_name}-postgres-params"
+  name   = "${var.project_name}-postgres-params-${formatdate("YYYYMMDD", timestamp())}"
   family = "postgres14"
 
   parameter {
