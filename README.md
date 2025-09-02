@@ -3,4 +3,4 @@ Modern Book Review Platform
 
 ## Prerequisites
 
-Node and Nestjs
+Node and Nestjs BE
