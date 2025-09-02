@@ -1,0 +1,120 @@
+name: Backend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bookcritic_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Run tests
+      run: npm test
+      env:
+        NODE_ENV: test
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: bookcritic_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+    
+    - name: Generate test coverage report
+      run: npm run test:cov
+  
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build application
+      run: npm run build
+    
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: |
+          dist
+          package.json
+          package-lock.json
+  
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: dist
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: Get EC2 public IP
+      id: get-ip
+      run: |
+        EC2_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=bookcritic-backend" --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
+        echo "EC2_IP=$EC2_IP" >> $GITHUB_OUTPUT
+    
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ steps.get-ip.outputs.EC2_IP }} >> ~/.ssh/known_hosts
+    
+    - name: Deploy to EC2
+      run: |
+        rsync -avz --delete dist/ ec2-user@${{ steps.get-ip.outputs.EC2_IP }}:/home/ec2-user/bookcritic-backend/dist/
+        rsync -avz package*.json ec2-user@${{ steps.get-ip.outputs.EC2_IP }}:/home/ec2-user/bookcritic-backend/
+        ssh ec2-user@${{ steps.get-ip.outputs.EC2_IP }} "cd /home/ec2-user/bookcritic-backend && npm ci --production && pm2 restart bookcritic || pm2 start dist/main.js --name bookcritic"

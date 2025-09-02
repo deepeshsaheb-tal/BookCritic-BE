@@ -1,0 +1,29 @@
+aws_region = "us-east-1"
+project_name = "bookcritic"
+
+# VPC Configuration
+vpc_cidr = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+public_subnets = ["10.0.101.0/24", "10.0.102.0/24"]
+private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+
+# EC2 Configuration
+ec2_ami = "ami-0c7217cdde317cfec"  # Amazon Linux 2023 AMI in us-east-1
+ec2_instance_type = "t2.micro"
+key_name = "bookcritic-key"  # Make sure this key pair exists in your AWS account
+
+# Database Configuration
+db_name = "bookcritic"
+db_username = "postgres"
+db_password = "YourStrongPasswordHere"  # Change this to a secure password
+db_instance_class = "db.t3.micro"
+
+# S3 Configuration
+frontend_bucket_name = "bookcritic-frontend-assets-unique-name"  # Must be globally unique
+
+# GitHub Repository URLs
+backend_github_repo = "https://github.com/yourusername/BookCritic-BE.git"
+frontend_github_repo = "https://github.com/yourusername/BookCritic-FE.git"
+
+# Environment
+node_env = "production"
