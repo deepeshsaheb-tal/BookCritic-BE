@@ -123,7 +123,7 @@ jobs:
         echo 'NVM directory:' && ls -la ~/.nvm || echo 'nvm not found' && \
         echo 'Node versions:' && ls -la ~/.nvm/versions/node/ || echo 'no node versions found'"
 
-    - name: Create deployment script
+    - name: Create .env file
       env:
         DB_HOST: ${{ secrets.DB_HOST }}
         DB_PORT: ${{ secrets.DB_PORT || '5432' }}
@@ -137,23 +137,14 @@ jobs:
         JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN || '7d' }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        cat > deploy.sh << 'EOL'
-        #!/bin/bash
-        cd /home/ubuntu/bookcritic-backend
-        source ~/.bashrc
-        source ~/.profile
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        
-        # Create .env file
         cat > .env << EOF
         # Database Configuration
-        DB_HOST=$DB_HOST
-        DB_PORT=$DB_PORT
-        DB_USERNAME=$DB_USERNAME
-        DB_PASSWORD=$DB_PASSWORD
-        DB_DATABASE=$DB_DATABASE
-        DB_SCHEMA=$DB_SCHEMA
+        DB_HOST=${DB_HOST}
+        DB_PORT=${DB_PORT}
+        DB_USERNAME=${DB_USERNAME}
+        DB_PASSWORD=${DB_PASSWORD}
+        DB_DATABASE=${DB_DATABASE}
+        DB_SCHEMA=${DB_SCHEMA}
         
         # Application Configuration
         PORT=3000
@@ -161,28 +152,45 @@ jobs:
         API_PREFIX=api/v1
         
         # JWT Configuration
-        JWT_SECRET=$JWT_SECRET
-        JWT_EXPIRES_IN=$JWT_EXPIRES_IN
-        JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET
-        JWT_REFRESH_EXPIRES_IN=$JWT_REFRESH_EXPIRES_IN
+        JWT_SECRET=${JWT_SECRET}
+        JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+        JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+        JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
         
         # OpenAI Configuration
-        OPENAI_API_KEY=$OPENAI_API_KEY
+        OPENAI_API_KEY=${OPENAI_API_KEY}
         EOF
-        
-        npm ci --production
-        if pm2 list | grep -q bookcritic; then
-          pm2 restart bookcritic
-        else
-          pm2 start dist/src/main.js --name bookcritic
-        fi
-        EOL
+
+    - name: Create deployment script
+      run: |
+        echo '#!/bin/bash' > deploy.sh
+        echo 'cd /home/ubuntu/bookcritic-backend' >> deploy.sh
+        echo 'source ~/.bashrc' >> deploy.sh
+        echo 'source ~/.profile' >> deploy.sh
+        echo 'export NVM_DIR="$HOME/.nvm"' >> deploy.sh
+        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> deploy.sh
+        echo '' >> deploy.sh
+        echo '# Install dependencies' >> deploy.sh
+        echo 'npm ci --production' >> deploy.sh
+        echo '' >> deploy.sh
+        echo '# Start or restart the application' >> deploy.sh
+        echo 'if pm2 list | grep -q bookcritic; then' >> deploy.sh
+        echo '  pm2 restart bookcritic' >> deploy.sh
+        echo 'else' >> deploy.sh
+        echo '  pm2 start dist/src/main.js --name bookcritic' >> deploy.sh
+        echo 'fi' >> deploy.sh
         
         chmod +x deploy.sh
 
     - name: Deploy to EC2
       run: |
+        # Transfer application files
         rsync -avz --delete dist/ ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/dist/
         rsync -avz package*.json ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/
+        
+        # Transfer .env file
+        rsync -avz .env ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/
+        
+        # Transfer and execute deployment script
         rsync -avz deploy.sh ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/
         ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "bash /home/ubuntu/deploy.sh"
