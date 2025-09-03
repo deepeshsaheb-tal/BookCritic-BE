@@ -124,14 +124,48 @@ jobs:
         echo 'Node versions:' && ls -la ~/.nvm/versions/node/ || echo 'no node versions found'"
 
     - name: Create deployment script
+      env:
+        DB_HOST: ${{ secrets.DB_HOST }}
+        DB_PORT: ${{ secrets.DB_PORT || '5432' }}
+        DB_USERNAME: ${{ secrets.DB_USERNAME }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_DATABASE: ${{ secrets.DB_DATABASE }}
+        DB_SCHEMA: ${{ secrets.DB_SCHEMA || 'public' }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '1d' }}
+        JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+        JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN || '7d' }}
       run: |
-        cat > deploy.sh << 'EOL'
+        cat > deploy.sh << EOL
         #!/bin/bash
         cd /home/ubuntu/bookcritic-backend
         source ~/.bashrc
         source ~/.profile
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        export NVM_DIR="\$HOME/.nvm"
+        [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
+        
+        # Create .env file
+        cat > .env << EOF
+        # Database Configuration
+        DB_HOST=${DB_HOST}
+        DB_PORT=${DB_PORT}
+        DB_USERNAME=${DB_USERNAME}
+        DB_PASSWORD=${DB_PASSWORD}
+        DB_DATABASE=${DB_DATABASE}
+        DB_SCHEMA=${DB_SCHEMA}
+        
+        # Application Configuration
+        PORT=3000
+        NODE_ENV=production
+        API_PREFIX=api/v1
+        
+        # JWT Configuration
+        JWT_SECRET=${JWT_SECRET}
+        JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+        JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+        JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+        EOF
+        
         npm ci --production
         if pm2 list | grep -q bookcritic; then
           pm2 restart bookcritic
