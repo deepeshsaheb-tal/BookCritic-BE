@@ -137,14 +137,27 @@ jobs:
         JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN || '7d' }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        cat > .env << EOF
+        # Debug: Check if secrets are available (will show as *** in logs)
+        echo "Checking if secrets are available:"
+        echo "DB_HOST: $DB_HOST"
+        echo "DB_PORT: $DB_PORT"
+        echo "DB_USERNAME: $DB_USERNAME"
+        echo "DB_PASSWORD: ***"
+        echo "DB_DATABASE: $DB_DATABASE"
+        echo "DB_SCHEMA: $DB_SCHEMA"
+        echo "JWT_SECRET: ***"
+        echo "JWT_REFRESH_SECRET: ***"
+        echo "OPENAI_API_KEY: ***"
+        
+        # Create .env file with proper quoting to handle special characters
+        cat > .env << 'EOF'
         # Database Configuration
-        DB_HOST=${DB_HOST}
-        DB_PORT=${DB_PORT}
-        DB_USERNAME=${DB_USERNAME}
-        DB_PASSWORD=${DB_PASSWORD}
-        DB_DATABASE=${DB_DATABASE}
-        DB_SCHEMA=${DB_SCHEMA}
+        DB_HOST="${DB_HOST}"
+        DB_PORT="${DB_PORT}"
+        DB_USERNAME="${DB_USERNAME}"
+        DB_PASSWORD="${DB_PASSWORD}"
+        DB_DATABASE="${DB_DATABASE}"
+        DB_SCHEMA="${DB_SCHEMA}"
         
         # Application Configuration
         PORT=3000
@@ -152,14 +165,18 @@ jobs:
         API_PREFIX=api/v1
         
         # JWT Configuration
-        JWT_SECRET=${JWT_SECRET}
-        JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
-        JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-        JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+        JWT_SECRET="${JWT_SECRET}"
+        JWT_EXPIRES_IN="${JWT_EXPIRES_IN}"
+        JWT_REFRESH_SECRET="${JWT_REFRESH_SECRET}"
+        JWT_REFRESH_EXPIRES_IN="${JWT_REFRESH_EXPIRES_IN}"
         
         # OpenAI Configuration
-        OPENAI_API_KEY=${OPENAI_API_KEY}
+        OPENAI_API_KEY="${OPENAI_API_KEY}"
         EOF
+        
+        # Show .env file content (with sensitive data masked)
+        echo "Generated .env file (sensitive data masked):"
+        cat .env | sed 's/\(DB_PASSWORD=\).*/\1***/' | sed 's/\(JWT_SECRET=\).*/\1***/' | sed 's/\(JWT_REFRESH_SECRET=\).*/\1***/' | sed 's/\(OPENAI_API_KEY=\).*/\1***/'
 
     - name: Create deployment script
       run: |
@@ -183,6 +200,18 @@ jobs:
         chmod +x deploy.sh
 
     - name: Deploy to EC2
+      env:
+        DB_HOST: ${{ secrets.DB_HOST }}
+        DB_PORT: ${{ secrets.DB_PORT || '5432' }}
+        DB_USERNAME: ${{ secrets.DB_USERNAME }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_DATABASE: ${{ secrets.DB_DATABASE }}
+        DB_SCHEMA: ${{ secrets.DB_SCHEMA || 'public' }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '1d' }}
+        JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+        JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN || '7d' }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
         # Transfer application files
         rsync -avz --delete dist/ ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/dist/
