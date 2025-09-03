@@ -113,8 +113,38 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ steps.get-ip.outputs.EC2_IP }} >> ~/.ssh/known_hosts
     
+    - name: Debug EC2 environment
+      run: |
+        ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "echo 'Debugging Node environment' && \
+        echo 'Current PATH:' && echo $PATH && \
+        echo 'Node location:' && which node || echo 'node not found' && \
+        echo 'NPM location:' && which npm || echo 'npm not found' && \
+        echo 'PM2 location:' && which pm2 || echo 'pm2 not found' && \
+        echo 'NVM directory:' && ls -la ~/.nvm || echo 'nvm not found' && \
+        echo 'Node versions:' && ls -la ~/.nvm/versions/node/ || echo 'no node versions found'"
+
+    - name: Create deployment script
+      run: |
+        cat > deploy.sh << 'EOL'
+        #!/bin/bash
+        cd /home/ubuntu/bookcritic-backend
+        source ~/.bashrc
+        source ~/.profile
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm ci --production
+        if pm2 list | grep -q bookcritic; then
+          pm2 restart bookcritic
+        else
+          pm2 start dist/src/main.js --name bookcritic
+        fi
+        EOL
+        
+        chmod +x deploy.sh
+
     - name: Deploy to EC2
       run: |
         rsync -avz --delete dist/ ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/dist/
         rsync -avz package*.json ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/
-        ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "cd /home/ubuntu/bookcritic-backend && source ~/.bashrc && source ~/.profile && export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && \. \"$NVM_DIR/nvm.sh\" && export PATH=\"/home/ubuntu/.nvm/versions/node/v22.19.0/bin:$PATH\" && /home/ubuntu/.nvm/versions/node/v22.19.0/bin/npm ci --production && /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 restart bookcritic || /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 start dist/src/main.js --name bookcritic"
+        rsync -avz deploy.sh ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/
+        ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "bash /home/ubuntu/deploy.sh"
