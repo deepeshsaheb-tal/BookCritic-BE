@@ -135,24 +135,25 @@ jobs:
         JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '1d' }}
         JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
         JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN || '7d' }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        cat > deploy.sh << EOL
+        cat > deploy.sh << 'EOL'
         #!/bin/bash
         cd /home/ubuntu/bookcritic-backend
         source ~/.bashrc
         source ~/.profile
-        export NVM_DIR="\$HOME/.nvm"
-        [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
         
         # Create .env file
         cat > .env << EOF
         # Database Configuration
-        DB_HOST=${DB_HOST}
-        DB_PORT=${DB_PORT}
-        DB_USERNAME=${DB_USERNAME}
-        DB_PASSWORD=${DB_PASSWORD}
-        DB_DATABASE=${DB_DATABASE}
-        DB_SCHEMA=${DB_SCHEMA}
+        DB_HOST=$DB_HOST
+        DB_PORT=$DB_PORT
+        DB_USERNAME=$DB_USERNAME
+        DB_PASSWORD=$DB_PASSWORD
+        DB_DATABASE=$DB_DATABASE
+        DB_SCHEMA=$DB_SCHEMA
         
         # Application Configuration
         PORT=3000
@@ -160,10 +161,13 @@ jobs:
         API_PREFIX=api/v1
         
         # JWT Configuration
-        JWT_SECRET=${JWT_SECRET}
-        JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
-        JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-        JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+        JWT_SECRET=$JWT_SECRET
+        JWT_EXPIRES_IN=$JWT_EXPIRES_IN
+        JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET
+        JWT_REFRESH_EXPIRES_IN=$JWT_REFRESH_EXPIRES_IN
+        
+        # OpenAI Configuration
+        OPENAI_API_KEY=$OPENAI_API_KEY
         EOF
         
         npm ci --production
@@ -177,8 +181,20 @@ jobs:
         chmod +x deploy.sh
 
     - name: Deploy to EC2
+      env:
+        DB_HOST: ${{ secrets.DB_HOST }}
+        DB_PORT: ${{ secrets.DB_PORT || '5432' }}
+        DB_USERNAME: ${{ secrets.DB_USERNAME }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_DATABASE: ${{ secrets.DB_DATABASE }}
+        DB_SCHEMA: ${{ secrets.DB_SCHEMA || 'public' }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '1d' }}
+        JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+        JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN || '7d' }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
         rsync -avz --delete dist/ ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/dist/
         rsync -avz package*.json ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/
         rsync -avz deploy.sh ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/
-        ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "bash /home/ubuntu/deploy.sh"
+        ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "DB_HOST='${DB_HOST}' DB_PORT='${DB_PORT}' DB_USERNAME='${DB_USERNAME}' DB_PASSWORD='${DB_PASSWORD}' DB_DATABASE='${DB_DATABASE}' DB_SCHEMA='${DB_SCHEMA}' JWT_SECRET='${JWT_SECRET}' JWT_EXPIRES_IN='${JWT_EXPIRES_IN}' JWT_REFRESH_SECRET='${JWT_REFRESH_SECRET}' JWT_REFRESH_EXPIRES_IN='${JWT_REFRESH_EXPIRES_IN}' OPENAI_API_KEY='${OPENAI_API_KEY}' bash /home/ubuntu/deploy.sh"
