@@ -181,20 +181,8 @@ jobs:
         chmod +x deploy.sh
 
     - name: Deploy to EC2
-      env:
-        DB_HOST: ${{ secrets.DB_HOST }}
-        DB_PORT: ${{ secrets.DB_PORT || '5432' }}
-        DB_USERNAME: ${{ secrets.DB_USERNAME }}
-        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        DB_DATABASE: ${{ secrets.DB_DATABASE }}
-        DB_SCHEMA: ${{ secrets.DB_SCHEMA || 'public' }}
-        JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '1d' }}
-        JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-        JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN || '7d' }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
         rsync -avz --delete dist/ ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/dist/
         rsync -avz package*.json ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/bookcritic-backend/
         rsync -avz deploy.sh ubuntu@${{ steps.get-ip.outputs.EC2_IP }}:/home/ubuntu/
-        ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "DB_HOST='${DB_HOST}' DB_PORT='${DB_PORT}' DB_USERNAME='${DB_USERNAME}' DB_PASSWORD='${DB_PASSWORD}' DB_DATABASE='${DB_DATABASE}' DB_SCHEMA='${DB_SCHEMA}' JWT_SECRET='${JWT_SECRET}' JWT_EXPIRES_IN='${JWT_EXPIRES_IN}' JWT_REFRESH_SECRET='${JWT_REFRESH_SECRET}' JWT_REFRESH_EXPIRES_IN='${JWT_REFRESH_EXPIRES_IN}' OPENAI_API_KEY='${OPENAI_API_KEY}' bash /home/ubuntu/deploy.sh"
+        ssh ubuntu@${{ steps.get-ip.outputs.EC2_IP }} "bash /home/ubuntu/deploy.sh"
