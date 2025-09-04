@@ -137,18 +137,6 @@ jobs:
         JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN || '7d' }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        # Debug: Check if secrets are available (will show as *** in logs)
-        echo "Checking if secrets are available:"
-        echo "DB_HOST: $DB_HOST"
-        echo "DB_PORT: $DB_PORT"
-        echo "DB_USERNAME: $DB_USERNAME"
-        echo "DB_PASSWORD: ***"
-        echo "DB_DATABASE: $DB_DATABASE"
-        echo "DB_SCHEMA: $DB_SCHEMA"
-        echo "JWT_SECRET: ***"
-        echo "JWT_REFRESH_SECRET: ***"
-        echo "OPENAI_API_KEY: ***"
-        
         # Create .env file with proper quoting to handle special characters
         cat > .env << 'EOF'
         # Database Configuration
