@@ -8,11 +8,11 @@ import { ApiProperty } from '@nestjs/swagger';
  */
 @Entity('user_favorites')
 export class UserFavorite {
-  @PrimaryColumn('uuid')
+  @PrimaryColumn('uuid', { name: 'user_id' })
   @ApiProperty({ description: 'User ID' })
   userId: string;
 
-  @PrimaryColumn('uuid')
+  @PrimaryColumn('uuid', { name: 'book_id' })
   @ApiProperty({ description: 'Book ID' })
   bookId: string;
 

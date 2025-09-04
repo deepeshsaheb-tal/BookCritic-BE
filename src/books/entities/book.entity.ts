@@ -16,13 +16,13 @@ export class Book extends BaseEntity {
   @Column()
   author: string;
 
-  @Column({ nullable: true, unique: true })
+  @Column({ unique: true })
   isbn: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text' })
   description: string;
 
-  @Column({ name: 'published_date', nullable: true, type: 'date' })
+  @Column({ name: 'published_date', type: 'date' })
   publishedDate: Date;
 
   @Column({ name: 'cover_image_url', nullable: true })

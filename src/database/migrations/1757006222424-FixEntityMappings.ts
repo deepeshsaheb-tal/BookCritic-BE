@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class FixUserFavorites1756988939242 implements MigrationInterface {
-    name = 'FixUserFavorites1756988939242'
+export class FixEntityMappings1757006222424 implements MigrationInterface {
+    name = 'FixEntityMappings1757006222424'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "book_genres" DROP CONSTRAINT "FK_book_genres_books"`);
@@ -15,24 +15,11 @@ export class FixUserFavorites1756988939242 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."IDX_books_title"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_books_author"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_reviews_rating"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD "userId" uuid NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("user_id", "book_id", "userId")`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD "bookId" uuid NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("user_id", "book_id", "userId", "bookId")`);
+        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "role"`);
         await queryRunner.query(`ALTER TABLE "users" ADD "role" character varying NOT NULL DEFAULT 'user'`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("userId", "bookId")`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ALTER COLUMN "user_id" DROP NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("book_id", "userId", "bookId")`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ALTER COLUMN "book_id" DROP NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_1cfc14574d4eb732d7bc65c7150" PRIMARY KEY ("userId", "bookId")`);
-        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "isbn" DROP NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "description" DROP NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "published_date" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "isbn" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "description" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "published_date" SET NOT NULL`);
         await queryRunner.query(`ALTER TABLE "book_genres" ADD CONSTRAINT "FK_dc378b8311ff85f0dd38f163090" FOREIGN KEY ("book_id") REFERENCES "books"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "book_genres" ADD CONSTRAINT "FK_43ff7d87d7506e768ca6491a1dd" FOREIGN KEY ("genre_id") REFERENCES "genres"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "FK_5238ce0a21cc77dc16c8efe3d36" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
@@ -48,24 +35,11 @@ export class FixUserFavorites1756988939242 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "FK_5238ce0a21cc77dc16c8efe3d36"`);
         await queryRunner.query(`ALTER TABLE "book_genres" DROP CONSTRAINT "FK_43ff7d87d7506e768ca6491a1dd"`);
         await queryRunner.query(`ALTER TABLE "book_genres" DROP CONSTRAINT "FK_dc378b8311ff85f0dd38f163090"`);
-        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "published_date" SET NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "description" SET NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "isbn" SET NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_1cfc14574d4eb732d7bc65c7150"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("book_id", "userId", "bookId")`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ALTER COLUMN "book_id" SET NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("user_id", "book_id", "userId", "bookId")`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ALTER COLUMN "user_id" SET NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("user_id", "book_id", "userId", "bookId")`);
+        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "published_date" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "description" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "books" ALTER COLUMN "isbn" DROP NOT NULL`);
         await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "role"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("user_id", "book_id", "userId")`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP COLUMN "bookId"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP CONSTRAINT "PK_user_favorites"`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" ADD CONSTRAINT "PK_user_favorites" PRIMARY KEY ("user_id", "book_id")`);
-        await queryRunner.query(`ALTER TABLE "user_favorites" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "users" ADD "role" character varying NOT NULL DEFAULT 'user'`);
         await queryRunner.query(`CREATE INDEX "IDX_reviews_rating" ON "reviews" ("rating") `);
         await queryRunner.query(`CREATE INDEX "IDX_books_author" ON "books" ("author") `);
         await queryRunner.query(`CREATE INDEX "IDX_books_title" ON "books" ("title") `);

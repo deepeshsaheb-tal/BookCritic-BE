@@ -22,7 +22,7 @@ export class User extends BaseEntity {
   @Column({ name: 'last_login', nullable: true })
   lastLogin: Date;
 
-  @Column({ default: 'user' })
+  @Column({ default: 'user', type: 'varchar' })
   role: string;
 
   @OneToMany(() => Review, (review) => review.user)

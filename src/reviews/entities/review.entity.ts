@@ -20,11 +20,11 @@ export class Review extends BaseEntity {
   @Column({ type: 'text' })
   content: string;
 
-  @ManyToOne(() => User, (user) => user.reviews)
+  @ManyToOne(() => User, (user) => user.reviews, { onDelete: 'NO ACTION', onUpdate: 'NO ACTION' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => Book, (book) => book.reviews)
+  @ManyToOne(() => Book, (book) => book.reviews, { onDelete: 'NO ACTION', onUpdate: 'NO ACTION' })
   @JoinColumn({ name: 'book_id' })
   book: Book;
 }
